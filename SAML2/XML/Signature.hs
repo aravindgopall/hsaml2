@@ -194,9 +194,10 @@ generateSignature sk si = do
 verifySignature :: PublicKeys -> String -> HXT.XmlTree -> IO (Maybe Bool)
 verifySignature pks xid doc = do
   let namespaces = DOM.toNsEnv $ HXT.runLA HXT.collectNamespaceDecl doc
-  x <- case HXT.runLA (getID xid HXT.>>> HXT.attachNsEnv namespaces) doc of
-    [x] -> return x
-    _ -> fail "verifySignature: element not found"
+  let x = doc
+  --x <- case HXT.runLA (getID xid HXT.>>> HXT.attachNsEnv namespaces) doc of
+    --[x] -> return x
+    --_ -> fail "verifySignature: element not found"
   sx <- case child "Signature" x of
     [sx] -> return sx
     _ -> fail "verifySignature: Signature not found"
