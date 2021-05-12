@@ -94,7 +94,16 @@ verifyReference r doc = case referenceURI r of
     | x@[_] <- HXT.runLA (getID xid) doc -> do
     t <- applyTransforms (referenceTransforms r) $ DOM.mkRoot [] x
     return $ xid <$ guard (applyDigest (referenceDigestMethod r) t == referenceDigestValue r)
-  _ -> return Nothing
+  _ -> do
+    print doc
+    t <- applyTransforms (referenceTransforms r) $ DOM.mkRoot [] [doc]
+    print t
+    print $ applyDigest (referenceDigestMethod r) t
+    print $ referenceDigestValue r
+    print $ (applyDigest (referenceDigestMethod r) t == referenceDigestValue r)
+    return $ "Juspay" <$ guard (applyDigest (referenceDigestMethod r) t == referenceDigestValue r)
+  --x -> return Nothing <* print x
+  --_ -> return Nothing
 
 data SigningKey
   = SigningKeyDSA DSA.KeyPair
@@ -194,32 +203,44 @@ generateSignature sk si = do
 verifySignature :: PublicKeys -> String -> HXT.XmlTree -> IO (Maybe Bool)
 verifySignature pks xid doc = do
   let namespaces = DOM.toNsEnv $ HXT.runLA HXT.collectNamespaceDecl doc
-  let x = doc
+  --let [x] = HXT.runLA (HXT.attachNsEnv namespaces) doc
+  let x@(DOM.NTree y _) = doc
+  let ch = HXT.runLA (HXT.getChildren HXT.>>> HXT.cleanupNamespaces HXT.collectPrefixUriPairs) x
+  print x
   --x <- case HXT.runLA (getID xid HXT.>>> HXT.attachNsEnv namespaces) doc of
     --[x] -> return x
     --_ -> fail "verifySignature: element not found"
-  sx <- case child "Signature" x of
-    [sx] -> return sx
-    _ -> fail "verifySignature: Signature not found"
+  --sx <- case child "Signature" x of
+    --[sx] -> return sx
+    --_ -> fail "verifySignature: Signature not found"
+  let sx = addNs $ last ch
+  let z = DOM.NTree y $ init ch
   s@Signature{ signatureSignedInfo = si } <- either fail return $ docToSAML sx
   six <- applyCanonicalization (signedInfoCanonicalizationMethod si) (Just xpath) $ DOM.mkRoot [] [x]
-  rl <- mapM (`verifyReference` x) (signedInfoReference si)
+  print (signatureMethodAlgorithm $ signedInfoSignatureMethod si)
+  print (Base64.encode $ signatureValue $ signatureSignatureValue s)
+  print six
+  rl <- mapM (`verifyReference` z) (signedInfoReference si)
   let keys = pks <> foldMap (foldMap keyinfo . keyInfoElements) (signatureKeyInfo s)
       verified :: Maybe Bool
       verified = verifyBytes keys (signatureMethodAlgorithm $ signedInfoSignatureMethod si) (signatureValue $ signatureSignatureValue s) six
       valid :: Bool
       valid = elem (Just xid) rl && all isJust rl
+  print valid
+  print verified
   return $ (valid &&) <$> verified
   where
-  child n = HXT.runLA $ HXT.getChildren HXT.>>> isDSElem n HXT.>>> HXT.cleanupNamespaces HXT.collectPrefixUriPairs
-  keyinfo (KeyInfoKeyValue kv) = publicKeyValues kv
-  keyinfo (X509Data l) = foldMap keyx509d l
-  keyinfo _ = mempty
-  keyx509d (X509Certificate sc) = keyx509p $ X509.certPubKey $ X509.getCertificate sc
-  keyx509d _ = mempty
-  keyx509p (X509.PubKeyRSA r) = mempty{ publicKeyRSA = Just r }
-  keyx509p (X509.PubKeyDSA d) = mempty{ publicKeyDSA = Just d }
-  keyx509p _ = mempty
-  xpathsel t = "/*[local-name()='" ++ t ++ "' and namespace-uri()='" ++ namespaceURIString ns ++ "']"
-  xpathbase = "/*" ++ xpathsel "Signature" ++ xpathsel "SignedInfo" ++ "//"
-  xpath = xpathbase ++ ". | " ++ xpathbase ++ "@* | " ++ xpathbase ++ "namespace::*"
+    addNs (DOM.NTree (HXT.XTag qn attrs) six) = DOM.NTree (HXT.XTag (DOM.mkNsName ("ds:" <> DOM.qualifiedName qn) "http://www.w3.org/2000/09/xmldsig#") (addNs <$> attrs)) (addNs <$> six)
+    addNs x = x
+    child n = HXT.runLA $ HXT.getChildren HXT.>>> isDSElem n HXT.>>> HXT.cleanupNamespaces HXT.collectPrefixUriPairs
+    keyinfo (KeyInfoKeyValue kv) = publicKeyValues kv
+    keyinfo (X509Data l) = foldMap keyx509d l
+    keyinfo _ = mempty
+    keyx509d (X509Certificate sc) = keyx509p $ X509.certPubKey $ X509.getCertificate sc
+    keyx509d _ = mempty
+    keyx509p (X509.PubKeyRSA r) = mempty{ publicKeyRSA = Just r }
+    keyx509p (X509.PubKeyDSA d) = mempty{ publicKeyDSA = Just d }
+    keyx509p _ = mempty
+    xpathsel t = "/*[local-name()='" ++ t ++ "' and namespace-uri()='" ++ namespaceURIString ns ++ "']"
+    xpathbase = "/*" ++ xpathsel "Signature" ++ xpathsel "SignedInfo" ++ "//"
+    xpath = xpathbase ++ ". | " ++ xpathbase ++ "@* | " ++ xpathbase ++ "namespace::*"
