@@ -14,6 +14,7 @@ module SAML2.XML.Signature
   , verifyBase64
   , generateSignature
   , verifySignature
+  , signingKeyValue
   ) where
 
 import Control.Applicative ((<|>))
@@ -95,12 +96,7 @@ verifyReference r doc = case referenceURI r of
     t <- applyTransforms (referenceTransforms r) $ DOM.mkRoot [] x
     return $ xid <$ guard (applyDigest (referenceDigestMethod r) t == referenceDigestValue r)
   _ -> do
-    print doc
     t <- applyTransforms (referenceTransforms r) $ DOM.mkRoot [] [doc]
-    print t
-    print $ applyDigest (referenceDigestMethod r) t
-    print $ referenceDigestValue r
-    print $ (applyDigest (referenceDigestMethod r) t == referenceDigestValue r)
     return $ "Juspay" <$ guard (applyDigest (referenceDigestMethod r) t == referenceDigestValue r)
   --x -> return Nothing <* print x
   --_ -> return Nothing
@@ -201,10 +197,10 @@ generateSignature sk si = do
 -- Just False:       signature verification failed || dangling refs || explicit ref is not among the signed ones
 -- Just True:        everything is ok!
 verifySignature :: PublicKeys -> String -> HXT.XmlTree -> IO (Maybe Bool)
-verifySignature pks xid doc = do
-  let namespaces = DOM.toNsEnv $ HXT.runLA HXT.collectNamespaceDecl doc
+verifySignature pks xid x = do
+  let namespaces = DOM.toNsEnv $ HXT.runLA HXT.collectNamespaceDecl x
   --let [x] = HXT.runLA (HXT.attachNsEnv namespaces) doc
-  let x@(DOM.NTree y _) = doc
+  let (DOM.NTree y _) = x
   let ch = HXT.runLA (HXT.getChildren HXT.>>> HXT.cleanupNamespaces HXT.collectPrefixUriPairs) x
   print x
   --x <- case HXT.runLA (getID xid HXT.>>> HXT.attachNsEnv namespaces) doc of
@@ -217,16 +213,17 @@ verifySignature pks xid doc = do
   let z = DOM.NTree y $ init ch
   s@Signature{ signatureSignedInfo = si } <- either fail return $ docToSAML sx
   six <- applyCanonicalization (signedInfoCanonicalizationMethod si) (Just xpath) $ DOM.mkRoot [] [x]
-  print (signatureMethodAlgorithm $ signedInfoSignatureMethod si)
-  print (Base64.encode $ signatureValue $ signatureSignatureValue s)
+  six' <- applyCanonicalization (signedInfoCanonicalizationMethod si) (Just xpath) $ DOM.mkRoot [] [z]
   print six
+  print six'
   rl <- mapM (`verifyReference` z) (signedInfoReference si)
   let keys = pks <> foldMap (foldMap keyinfo . keyInfoElements) (signatureKeyInfo s)
       verified :: Maybe Bool
       verified = verifyBytes keys (signatureMethodAlgorithm $ signedInfoSignatureMethod si) (signatureValue $ signatureSignatureValue s) six
       valid :: Bool
       valid = elem (Just xid) rl && all isJust rl
-  print valid
+  print $ verifyBytes keys (signatureMethodAlgorithm $ signedInfoSignatureMethod si) (signatureValue $ signatureSignatureValue s) six
+  print $ verifyBytes keys (signatureMethodAlgorithm $ signedInfoSignatureMethod si) (signatureValue $ signatureSignatureValue s) six'
   print verified
   return $ (valid &&) <$> verified
   where
