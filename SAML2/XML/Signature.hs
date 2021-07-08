@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE OverloadedStrings#-}
 -- |
 -- XML Signature Syntax and Processing
 --
@@ -13,6 +14,7 @@ module SAML2.XML.Signature
   , signBase64
   , verifyBase64
   , generateSignature
+  , juspaySignature
   , verifySignature
   , signingKeyValue
   ) where
@@ -178,6 +180,18 @@ signBase64 sk = fmap Base64.encode . signBytes sk
 
 verifyBase64 :: PublicKeys -> IdentifiedURI SignatureAlgorithm -> BS.ByteString -> BS.ByteString -> Maybe Bool
 verifyBase64 pk alg m = either (const $ Just False) (verifyBytes pk alg m) . Base64.decode where
+
+juspaySignature :: SigningKey -> SignedInfo -> BS.ByteString -> IO Signature
+juspaySignature sk si ns = do
+  let six = "<SignedInfo xmlns=\"http://www.w3.org/2000/09/xmldsig#\"><CanonicalizationMethod Algorithm=\"http://www.w3.org/2001/10/xml-exc-c14n#\"></CanonicalizationMethod><SignatureMethod Algorithm=\"http://www.w3.org/2000/09/xmldsig#rsa-sha1\"></SignatureMethod><Reference URI=\"\"><Transforms><Transform Algorithm=\"http://www.w3.org/2000/09/xmldsig#enveloped-signature\"></Transform><Transform Algorithm=\"http://www.w3.org/2001/10/xml-exc-c14n#\"></Transform></Transforms><DigestMethod Algorithm=\"http://www.w3.org/2001/04/xmlenc#sha256\"></DigestMethod><DigestValue>" <> ns <> "</DigestValue></Reference></SignedInfo>"
+  sv <- signBytes sk six
+  return Signature
+    { signatureId = Nothing
+    , signatureSignedInfo = si
+    , signatureSignatureValue = SignatureValue Nothing sv
+    , signatureKeyInfo = Just $ KeyInfo Nothing $ KeyInfoKeyValue (signingKeyValue sk) NonEmpty.:| []
+    , signatureObject = []
+    }
 
 generateSignature :: SigningKey -> SignedInfo -> IO Signature
 generateSignature sk si = do
