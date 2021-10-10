@@ -1,0 +1,94 @@
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/XML/Types.hs:
+  hash: 7033d9b40626e594616ee25323d5897d0a5e51eb677af8fc0081efc5f6c82c11
+/Users/aravindmallapureddy/acreed/hsaml2/test/XML/noncanonical3.xml:
+  hash: 499aa7b6fccf4827e69eaf059b1f3daa321021f45170b570635cf93eb50d17e6
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Bindings/Identifiers.hs:
+  hash: fc273952331a25f6dd1c0d3f4ee14f8bfe1facb32201c05a4f9befd7421c32e3
+/Users/aravindmallapureddy/acreed/hsaml2/test/Metadata/metadata-nyu.xml:
+  hash: 19fc743015b2f80d492b7b5932e6e37fee9cdaf5222aee8982aed91b5c27e5c1
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/XML/libxml2_stub.c:
+  hash: e47364b3a587bfbfb58f66287b783c173fedd13849d67271486580ef3a3eaa37
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Metadata.hs:
+  hash: 4a937eb227fe7bab0fdb9738ff7a6fc0c6f6d7121a52791d33d3434a5648c53a
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Profiles.hs:
+  hash: 44768ea64d7a7400bd693f62b80ddba36417ac14e97a72cfd1255389c400ebaa
+/Users/aravindmallapureddy/acreed/hsaml2/test/XML/world.txt:
+  hash: 486ea46224d1bb4fb680f34f7c9ad96a8f24ec88be73ea8e5a6c65260e9cb8a7
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2.hs:
+  hash: bffdacecf2fd1206e084b8834aa69371f2555e05334a219cb8e32e0a4a3107b6
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Metadata/Metadata.hs:
+  hash: cfe26f28ae095d95f2df8fe7f627a31f347a89f62a4e43617550b0fd858ed002
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Bindings/HTTPRedirect.hs:
+  hash: f86493613d20fea8eaab59d0cbd31f21b47493eac0ceefa4c8ab89f68409a970
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Core/Datatypes.hs:
+  hash: b5a43f38f996d43d287a40c6874d3aabf660c3dbfd60c64da7a00644b403a59f
+/Users/aravindmallapureddy/.stack/programs/x86_64-osx/ghc-8.10.4/lib/ghc-8.10.4/include/ghcversion.h:
+  hash: ddf0d2a5b1862138ade2de39566db63c5db748c6df9abc567bd8b7326ae3838a
+/Users/aravindmallapureddy/acreed/hsaml2/test/XML/noncanonical4.xml:
+  hash: 74386ae086569be3c144127c4e3c513c18c3154ba78c822f18b4495d9c9493e0
+/Users/aravindmallapureddy/acreed/hsaml2/test/XML/signature-example.xml:
+  hash: f429662fde3a5b871240a8c1c731319a1b755d06450101f412a4e7b844454c59
+/Users/aravindmallapureddy/acreed/hsaml2/test/Metadata/metadata-idp.xml:
+  hash: c6ac4e933228c36299b7d99d1f939efebb890eb06bf32a0b6121fd920df0d000
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Core/Protocols.hs:
+  hash: cc0fe473233087e280413a635451e902c05e21f61d4c48e16c32dec102995912
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/XML.hs:
+  hash: 94ccfe38ae13bb984a3b05bc383d5ef7947bfa0fe82bae9eaced0c0b1d77650d
+/Users/aravindmallapureddy/acreed/hsaml2/hsaml2.cabal:
+  hash: d2324a27b41f31ae1df8d6f2907dd8e6cedb0024d0d05c77a8f1bf3f272ce5fc
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/XML/Encryption.hs:
+  hash: ee5d444fad2e537403a289775daedf138641917c25d2184db5e06312c4545d20
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Core/Identifiers.hs:
+  hash: 35a088f65f068fb9737e81ad53e955632d7d06e5c5dcb1a25899d6cb521e4576
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/XML/Canonical.hs:
+  hash: ffca7e134fee4635f8e730fce5947e25cfab31654974e1a6d08b2e411158f6dc
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Lens.hs:
+  hash: 500cdef6d086c9a909e3821ea89e2691bda8b8a8c3ad113b45fbc3df16641a1a
+/Users/aravindmallapureddy/acreed/hsaml2/test/XML/noncanonical5.xml:
+  hash: e92c779dd34d35728399a8809bffb6c4808d568f84649374aca37f8ad580f780
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/XML/ASN1.hs:
+  hash: 76018962452ddcc96bb39fac25d852a3bd574146388bdc4f240c655bf7b7eb20
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Core.hs:
+  hash: 990fda25575a49aed36064c5ee6c9f60d35fd47a7980148d1982cf406ba2448f
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Core/Versioning.hs:
+  hash: 8a167eea80b810d5aa75e470c94b5f2106a53e11341fd193ec885f6c350ef1f3
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/XML/Signature/Types.hs:
+  hash: 7d74602d0012b508680b52047d5cd0a0f875fdd78875859b70886705681ba16c
+/Users/aravindmallapureddy/acreed/hsaml2/test/Metadata/metadata-osf.xml:
+  hash: d6db26df0ca1037a3efe055c37668755cd89d8e4828ea4db8b83adbc6dfd3bc2
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Core/Assertions.hs:
+  hash: 522f7539f298ac1221a76a1baa7b62a17b067e2d844a19ccbc9ac9cd3cbfbad5
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Bindings/HTTPPOST.hs:
+  hash: 9f5b1a04bb8b035a42ee0e7534ed8d9e11c9049b44b7c8492dfac969976e29f5
+/Users/aravindmallapureddy/acreed/hsaml2/test/XML/noncanonical6.xml:
+  hash: 12e8d9ca6dee2881accbbef09b09496ce377af58889ccc83d52ff4b98a5ea7d9
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Core/Signature.hs:
+  hash: ba65623007a73e4a824b9c6fb9bb8a6d910c2744056804c5b4e1b965643c0660
+/Users/aravindmallapureddy/acreed/hsaml2/test/XML/noncanonical1.xml:
+  hash: 8ea5ffa4cbfadc7cdcffb10eab67ebb82bfe80a13bd4798c308b9cdaa133b0f7
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/XML/Schema.hs:
+  hash: dba67b491031b2a3e7122407ba531091a64ad27bd1b60c3322b1e517ad7e3859
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Profiles/ConfirmationMethod.hs:
+  hash: c8aae84d88a344323e57298b3e95f9d4cbee1ce7a3cd9aa38377fccd7a243278
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/XML/Signature.hs:
+  hash: ceb3030057d62d667f98a15fb508f4e97ef7517a4a27631fedf0c64636e91e31
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Bindings.hs:
+  hash: 1c0d59d29cce332796ab40c5eae0628f0a50c09e1cd31b9fa7dbc84fe40d2bff
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Bindings/Internal.hs:
+  hash: ac9f95f5a2596e1cad75186de64e4409e08df672a7b4a27a883c9215b7f5c373
+/Users/aravindmallapureddy/acreed/hsaml2/.stack-work/dist/x86_64-osx/Cabal-3.2.1.0/build/autogen/cabal_macros.h:
+  hash: 38e5f639ac0061d8b9e96f5ac81d5eebf274b4e3edee94b60199cd9b06176b60
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/XML/LibXML2.hsc:
+  hash: 622824ea1a9229d9186479f94f38f8aac4a3c4108d23fd754c9d46be0d905e55
+/Users/aravindmallapureddy/acreed/hsaml2/test/XML/encryption-example.xml:
+  hash: c0fd113ca0a15380f87ef3fee9bfd03ad264707f8e65f1182604284890f3610f
+/Users/aravindmallapureddy/acreed/hsaml2/test/Metadata/metadata-sp.xml:
+  hash: 863a79c139d3201fa25f0813bb530c322c7c928453ef261c2ba920dd2bf11f33
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Core/Namespaces.hs:
+  hash: 8d1f0505befb7359c8f49c0570c7403d739e20c31649ed12e7b329a22b8de8c8
+/Users/aravindmallapureddy/acreed/hsaml2/test/XML/noncanonical2.xml:
+  hash: 013e38a224983af61879df7fc866f6c8c7a1d3b601fd3b4b7000101e03b2a798
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/XML/Schema/Datatypes.hs:
+  hash: fceee53daa32b80314e7795917c59e19d4b5fd566d7973bb7a1c2c1af03242bc
+/Users/aravindmallapureddy/acreed/hsaml2/SAML2/Bindings/General.hs:
+  hash: f4361f3d79e438a9a523ef1430ed6f59cf8a81201e9d9d96daf871e974ff30ce
