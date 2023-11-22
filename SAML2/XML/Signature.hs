@@ -20,6 +20,7 @@ module SAML2.XML.Signature
   ) where
 
 import Control.Applicative ((<|>))
+import Control.DeepSeq
 import Control.Monad (guard, (<=<))
 import Crypto.Number.Basic (numBytes)
 import Crypto.Number.Serialize (i2ospOf_, os2ip)
@@ -210,36 +211,18 @@ generateSignature sk si = do
 -- Nothing:          no matching key/alg pairs found
 -- Just False:       signature verification failed || dangling refs || explicit ref is not among the signed ones
 -- Just True:        everything is ok!
-verifySignature :: PublicKeys -> String -> HXT.XmlTree -> IO (Maybe Bool)
-verifySignature pks xid x = do
-  let namespaces = DOM.toNsEnv $ HXT.runLA HXT.collectNamespaceDecl x
-  --let [x] = HXT.runLA (HXT.attachNsEnv namespaces) doc
-  let (DOM.NTree y _) = x
-  let ch = HXT.runLA (HXT.getChildren HXT.>>> HXT.cleanupNamespaces HXT.collectPrefixUriPairs) x
-  print x
-  --x <- case HXT.runLA (getID xid HXT.>>> HXT.attachNsEnv namespaces) doc of
-    --[x] -> return x
-    --_ -> fail "verifySignature: element not found"
-  --sx <- case child "Signature" x of
-    --[sx] -> return sx
-    --_ -> fail "verifySignature: Signature not found"
-  let sx = addNs $ last ch
-  let z = DOM.NTree y $ init ch
+verifySignature :: PublicKeys -> HXT.XmlTree -> IO (Maybe Bool)
+verifySignature pks x' = do
+  let x = force x' -- force evaluation is needed
+  let (DOM.NTree y _) = x -- x = complete xml, y = root element
+  let ch = HXT.runLA (HXT.getChildren HXT.>>> HXT.cleanupNamespaces HXT.collectPrefixUriPairs) x -- ch = children elements (all elements except root element)
+  let sx = addNs $ last ch -- sx = signature element
   s@Signature{ signatureSignedInfo = si } <- either fail return $ docToSAML sx
   six <- applyCanonicalization (signedInfoCanonicalizationMethod si) (Just xpath) $ DOM.mkRoot [] [x]
-  six' <- applyCanonicalization (signedInfoCanonicalizationMethod si) (Just xpath) $ DOM.mkRoot [] [z]
-  print six
-  print six'
-  rl <- mapM (`verifyReference` z) (signedInfoReference si)
   let keys = pks <> foldMap (foldMap keyinfo . keyInfoElements) (signatureKeyInfo s)
       verified :: Maybe Bool
       verified = verifyBytes keys (signatureMethodAlgorithm $ signedInfoSignatureMethod si) (signatureValue $ signatureSignatureValue s) six
-      valid :: Bool
-      valid = elem (Just xid) rl && all isJust rl
-  print $ verifyBytes keys (signatureMethodAlgorithm $ signedInfoSignatureMethod si) (signatureValue $ signatureSignatureValue s) six
-  print $ verifyBytes keys (signatureMethodAlgorithm $ signedInfoSignatureMethod si) (signatureValue $ signatureSignatureValue s) six'
-  print verified
-  return $ (valid &&) <$> verified
+  return verified
   where
     addNs (DOM.NTree (HXT.XTag qn attrs) six) = DOM.NTree (HXT.XTag (DOM.mkNsName ("ds:" <> DOM.qualifiedName qn) "http://www.w3.org/2000/09/xmldsig#") (addNs <$> attrs)) (addNs <$> six)
     addNs x = x
