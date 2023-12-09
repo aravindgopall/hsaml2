@@ -92,17 +92,19 @@ generateReference r x = do
   return r
     { referenceDigestValue = d }
 
-verifyReference :: Reference -> HXT.XmlTree -> IO (Maybe String)
+verifyReference :: Reference -> HXT.XmlTree -> IO Bool
 verifyReference r doc = case referenceURI r of
   Just URI{ uriScheme = "", uriAuthority = Nothing, uriPath = "", uriQuery = "", uriFragment = '#':xid }
     | x@[_] <- HXT.runLA (getID xid) doc -> do
     t <- applyTransforms (referenceTransforms r) $ DOM.mkRoot [] x
-    return $ xid <$ guard (applyDigest (referenceDigestMethod r) t == referenceDigestValue r)
+    return (applyDigest (referenceDigestMethod r) t == referenceDigestValue r)
   _ -> do
-    t <- applyTransforms (referenceTransforms r) $ DOM.mkRoot [] [doc]
-    return $ "Juspay" <$ guard (applyDigest (referenceDigestMethod r) t == referenceDigestValue r)
-  --x -> return Nothing <* print x
-  --_ -> return Nothing
+    t <- applyTransforms (referenceTransforms r) doc
+    print $ "log-reference: "         <> show r
+    print $ "log-transformed-xml: "   <> t
+    print $ "log-calculated-digest: " <> show (applyDigest (referenceDigestMethod r) t)
+    print $ "log-xml-digest: "        <> show (referenceDigestValue r)
+    return (applyDigest (referenceDigestMethod r) t == referenceDigestValue r)
 
 data SigningKey
   = SigningKeyDSA DSA.KeyPair
@@ -212,17 +214,31 @@ generateSignature sk si = do
 -- Just False:       signature verification failed || dangling refs || explicit ref is not among the signed ones
 -- Just True:        everything is ok!
 verifySignature :: PublicKeys -> HXT.XmlTree -> IO (Maybe Bool)
-verifySignature pks x' = do
-  let x = force x' -- force evaluation is needed
-  let (DOM.NTree y _) = x -- x = complete xml, y = root element
-  let ch = HXT.runLA (HXT.getChildren HXT.>>> HXT.cleanupNamespaces HXT.collectPrefixUriPairs) x -- ch = children elements (all elements except root element)
-  let sx = addNs $ last ch -- sx = signature element
-  s@Signature{ signatureSignedInfo = si } <- either fail return $ docToSAML sx
-  six <- applyCanonicalization (signedInfoCanonicalizationMethod si) (Just xpath) $ DOM.mkRoot [] [x]
-  let keys = pks <> foldMap (foldMap keyinfo . keyInfoElements) (signatureKeyInfo s)
-      verified :: Maybe Bool
-      verified = verifyBytes keys (signatureMethodAlgorithm $ signedInfoSignatureMethod si) (signatureValue $ signatureSignatureValue s) six
-  return verified
+verifySignature pks xmlTree' = do
+  let xmlTree = force xmlTree' -- force evaluation is needed
+      (DOM.NTree rootNode _) = xmlTree
+      childrenNodesList = HXT.runLA (HXT.getChildren HXT.>>> HXT.cleanupNamespaces HXT.collectPrefixUriPairs) xmlTree
+      signatureNode = addNs $ last childrenNodesList
+      xmlTreeWOSignature = DOM.NTree rootNode (init childrenNodesList)
+  signature@Signature{ signatureSignedInfo = signedInfo } <- either fail return $ docToSAML signatureNode
+  signedInfoXml <- applyCanonicalization (signedInfoCanonicalizationMethod signedInfo) (Just xpath) $ DOM.mkRoot [] [xmlTree]
+  (isDigestValid NonEmpty.:| _) <- mapM (`verifyReference` xmlTreeWOSignature) (signedInfoReference signedInfo)
+  let keys = pks <> foldMap (foldMap keyinfo . keyInfoElements) (signatureKeyInfo signature)
+      isDigestVerified = verifyBytes keys (signatureMethodAlgorithm $ signedInfoSignatureMethod signedInfo) (signatureValue $ signatureSignatureValue signature) signedInfoXml
+  -----
+  print $ "log-xmlTree: " <> show xmlTree
+  print $ "log-rootNode: " <> show rootNode
+  print $ "log-childrenNodesList: " <> show childrenNodesList
+  print $ "log-signatureNode: " <> show signatureNode -- this has namespace "ds:"
+  print $ "log-xmlTreeWOSignature: " <> show xmlTreeWOSignature
+  print $ "log-signature: " <> show signature
+  print $ "log-signedInfo: " <> show signedInfo
+  print $ "log-xpath: " <> show xpath
+  print $ "log-signedInfoXml: " <> signedInfoXml
+  print $ "log-isDigestValid: " <> show isDigestValid
+  print $ "log-isDigestVerified: " <> show isDigestVerified
+  -----
+  return $ (isDigestValid &&) <$> isDigestVerified
   where
     addNs (DOM.NTree (HXT.XTag qn attrs) six) = DOM.NTree (HXT.XTag (DOM.mkNsName ("ds:" <> DOM.qualifiedName qn) "http://www.w3.org/2000/09/xmldsig#") (addNs <$> attrs)) (addNs <$> six)
     addNs x = x
