@@ -99,11 +99,7 @@ verifyReference r doc = case referenceURI r of
     t <- applyTransforms (referenceTransforms r) $ DOM.mkRoot [] x
     return (applyDigest (referenceDigestMethod r) t == referenceDigestValue r)
   _ -> do
-    t <- applyTransforms (referenceTransforms r) doc
-    print $ "log-reference: "         <> show r
-    print $ "log-transformed-xml: "   <> t
-    print $ "log-calculated-digest: " <> show (applyDigest (referenceDigestMethod r) t)
-    print $ "log-xml-digest: "        <> show (referenceDigestValue r)
+    t <- applyTransforms (referenceTransforms r) $ DOM.mkRoot [] [doc]
     return (applyDigest (referenceDigestMethod r) t == referenceDigestValue r)
 
 data SigningKey
@@ -225,19 +221,6 @@ verifySignature pks xmlTree' = do
   (isDigestValid NonEmpty.:| _) <- mapM (`verifyReference` xmlTreeWOSignature) (signedInfoReference signedInfo)
   let keys = pks <> foldMap (foldMap keyinfo . keyInfoElements) (signatureKeyInfo signature)
       isDigestVerified = verifyBytes keys (signatureMethodAlgorithm $ signedInfoSignatureMethod signedInfo) (signatureValue $ signatureSignatureValue signature) signedInfoXml
-  -----
-  print $ "log-xmlTree: " <> show xmlTree
-  print $ "log-rootNode: " <> show rootNode
-  print $ "log-childrenNodesList: " <> show childrenNodesList
-  print $ "log-signatureNode: " <> show signatureNode -- this has namespace "ds:"
-  print $ "log-xmlTreeWOSignature: " <> show xmlTreeWOSignature
-  print $ "log-signature: " <> show signature
-  print $ "log-signedInfo: " <> show signedInfo
-  print $ "log-xpath: " <> show xpath
-  print $ "log-signedInfoXml: " <> signedInfoXml
-  print $ "log-isDigestValid: " <> show isDigestValid
-  print $ "log-isDigestVerified: " <> show isDigestVerified
-  -----
   return $ (isDigestValid &&) <$> isDigestVerified
   where
     addNs (DOM.NTree (HXT.XTag qn attrs) six) = DOM.NTree (HXT.XTag (DOM.mkNsName ("ds:" <> DOM.qualifiedName qn) "http://www.w3.org/2000/09/xmldsig#") (addNs <$> attrs)) (addNs <$> six)
