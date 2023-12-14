@@ -92,6 +92,7 @@ generateReference r x = do
   return r
     { referenceDigestValue = d }
 
+-- |§JP Removed xid logic
 verifyReference :: Reference -> HXT.XmlTree -> IO Bool
 verifyReference r doc = case referenceURI r of
   Just URI{ uriScheme = "", uriAuthority = Nothing, uriPath = "", uriQuery = "", uriFragment = '#':xid }
@@ -205,20 +206,35 @@ generateSignature sk si = do
     , signatureObject = []
     }
 
+-- |§JP Using a default implicit transform for NPCI inbound xmls
+npciDefaultImplicitTransform :: Transform
+npciDefaultImplicitTransform = Transform {transformAlgorithm = Identified (TransformCanonicalization (CanonicalXML10 {canonicalWithComments = False})), transformInclusiveNamespaces = Nothing, transform = []}
+
+addTransform :: Maybe Transforms -> Transform -> Maybe Transforms
+addTransform (Just Transforms{ transforms = t1 NonEmpty.:| [] }) transform = Just Transforms { transforms = t1 NonEmpty.:| [transform] }
+addTransform tfs _ = tfs
+
 -- Exception in IO:  something is syntactically wrong with the input
 -- Nothing:          no matching key/alg pairs found
 -- Just False:       signature verification failed || dangling refs || explicit ref is not among the signed ones
 -- Just True:        everything is ok!
 verifySignature :: PublicKeys -> HXT.XmlTree -> IO (Maybe Bool)
 verifySignature pks xmlTree' = do
-  let xmlTree = force xmlTree' -- force evaluation is needed
+  let xmlTree = force xmlTree' -- |§JP force evaluation is needed
       (DOM.NTree rootNode _) = xmlTree
       childrenNodesList = HXT.runLA (HXT.getChildren HXT.>>> HXT.cleanupNamespaces HXT.collectPrefixUriPairs) xmlTree
       signatureNode = addNs $ last childrenNodesList
       xmlTreeWOSignature = DOM.NTree rootNode (init childrenNodesList)
-  signature@Signature{ signatureSignedInfo = signedInfo } <- either fail return $ docToSAML signatureNode
+  signature@Signature {
+    signatureSignedInfo = signedInfo@SignedInfo {
+      signedInfoReference = reference@Reference {
+        referenceTransforms = transforms
+      } NonEmpty.:| []
+    }
+  } <- either fail return $ docToSAML signatureNode
+  let implicitTransformEmbeddedSI = signedInfo { signedInfoReference = reference { referenceTransforms = addTransform transforms npciDefaultImplicitTransform } NonEmpty.:| [] } -- |§JP Adding a default implicit transform to the existing list
+  (isDigestValid NonEmpty.:| _) <- mapM (`verifyReference` xmlTreeWOSignature) (signedInfoReference implicitTransformEmbeddedSI)
   signedInfoXml <- applyCanonicalization (signedInfoCanonicalizationMethod signedInfo) (Just xpath) $ DOM.mkRoot [] [xmlTree]
-  (isDigestValid NonEmpty.:| _) <- mapM (`verifyReference` xmlTreeWOSignature) (signedInfoReference signedInfo)
   let keys = pks <> foldMap (foldMap keyinfo . keyInfoElements) (signatureKeyInfo signature)
       isDigestVerified = verifyBytes keys (signatureMethodAlgorithm $ signedInfoSignatureMethod signedInfo) (signatureValue $ signatureSignatureValue signature) signedInfoXml
   return $ (isDigestValid &&) <$> isDigestVerified
