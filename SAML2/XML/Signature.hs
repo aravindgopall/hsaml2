@@ -221,8 +221,7 @@ addTransform tfs _ = tfs
 verifySignature :: PublicKeys -> HXT.XmlTree -> IO (Maybe Bool)
 verifySignature pks xmlTree' = do
   let xmlTree = force xmlTree' -- |§JP force evaluation is needed
-      (DOM.NTree rootNode _) = xmlTree
-      childrenNodesList = HXT.runLA (HXT.getChildren HXT.>>> HXT.cleanupNamespaces HXT.collectPrefixUriPairs) xmlTree
+      (DOM.NTree rootNode childrenNodesList) = xmlTree
       signatureNode = addNs $ last childrenNodesList
       xmlTreeWOSignature = DOM.NTree rootNode (init childrenNodesList)
   signature@Signature {
@@ -241,7 +240,6 @@ verifySignature pks xmlTree' = do
   where
     addNs (DOM.NTree (HXT.XTag qn attrs) six) = DOM.NTree (HXT.XTag (DOM.mkNsName ("ds:" <> DOM.qualifiedName qn) "http://www.w3.org/2000/09/xmldsig#") (addNs <$> attrs)) (addNs <$> six)
     addNs x = x
-    child n = HXT.runLA $ HXT.getChildren HXT.>>> isDSElem n HXT.>>> HXT.cleanupNamespaces HXT.collectPrefixUriPairs
     keyinfo (KeyInfoKeyValue kv) = publicKeyValues kv
     keyinfo (X509Data l) = foldMap keyx509d l
     keyinfo _ = mempty
