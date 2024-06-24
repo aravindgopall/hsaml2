@@ -101,9 +101,13 @@ xpDateTime = XP.PU
 -- |§3.2.16
 type Base64Binary = BS.ByteString
 
+-- |§JP Using lenient decode to support cases of incorrect padding
+b64DecodeL :: BS.ByteString -> Either String BS.ByteString
+b64DecodeL bs = Right (B64.decodeLenient bs)
+
 xpBase64Binary :: XP.PU Base64Binary
 xpBase64Binary = XP.xpWrapEither
-  ( B64.decode . BS.pack . filter (not . isXmlSpaceChar)
+  ( b64DecodeL . BS.pack . filter (not . isXmlSpaceChar)
   , BS.unpack . B64.encode
   ) $ XP.xpText0DT $ XPS.scDTxsd XSD.xsd_base64Binary []
 

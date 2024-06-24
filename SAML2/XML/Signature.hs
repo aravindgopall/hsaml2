@@ -20,6 +20,7 @@ module SAML2.XML.Signature
   ) where
 
 import Control.Applicative ((<|>))
+import Control.DeepSeq
 import Control.Monad (guard, (<=<))
 import Crypto.Number.Basic (numBytes)
 import Crypto.Number.Serialize (i2ospOf_, os2ip)
@@ -91,17 +92,16 @@ generateReference r x = do
   return r
     { referenceDigestValue = d }
 
-verifyReference :: Reference -> HXT.XmlTree -> IO (Maybe String)
+-- |§JP Removed xid logic
+verifyReference :: Reference -> HXT.XmlTree -> IO Bool
 verifyReference r doc = case referenceURI r of
   Just URI{ uriScheme = "", uriAuthority = Nothing, uriPath = "", uriQuery = "", uriFragment = '#':xid }
     | x@[_] <- HXT.runLA (getID xid) doc -> do
     t <- applyTransforms (referenceTransforms r) $ DOM.mkRoot [] x
-    return $ xid <$ guard (applyDigest (referenceDigestMethod r) t == referenceDigestValue r)
+    return (applyDigest (referenceDigestMethod r) t == referenceDigestValue r)
   _ -> do
     t <- applyTransforms (referenceTransforms r) $ DOM.mkRoot [] [doc]
-    return $ "Juspay" <$ guard (applyDigest (referenceDigestMethod r) t == referenceDigestValue r)
-  --x -> return Nothing <* print x
-  --_ -> return Nothing
+    return (applyDigest (referenceDigestMethod r) t == referenceDigestValue r)
 
 data SigningKey
   = SigningKeyDSA DSA.KeyPair
@@ -206,44 +206,40 @@ generateSignature sk si = do
     , signatureObject = []
     }
 
+-- |§JP Using a default implicit transform for NPCI inbound xmls
+npciDefaultImplicitTransform :: Transform
+npciDefaultImplicitTransform = Transform {transformAlgorithm = Identified (TransformCanonicalization (CanonicalXML10 {canonicalWithComments = False})), transformInclusiveNamespaces = Nothing, transform = []}
+
+addTransform :: Maybe Transforms -> Transform -> Maybe Transforms
+addTransform (Just Transforms{ transforms = t1 NonEmpty.:| [] }) transform = Just Transforms { transforms = t1 NonEmpty.:| [transform] }
+addTransform tfs _ = tfs
+
 -- Exception in IO:  something is syntactically wrong with the input
 -- Nothing:          no matching key/alg pairs found
 -- Just False:       signature verification failed || dangling refs || explicit ref is not among the signed ones
 -- Just True:        everything is ok!
-verifySignature :: PublicKeys -> String -> HXT.XmlTree -> IO (Maybe Bool)
-verifySignature pks xid x = do
-  let namespaces = DOM.toNsEnv $ HXT.runLA HXT.collectNamespaceDecl x
-  --let [x] = HXT.runLA (HXT.attachNsEnv namespaces) doc
-  let (DOM.NTree y _) = x
-  let ch = HXT.runLA (HXT.getChildren HXT.>>> HXT.cleanupNamespaces HXT.collectPrefixUriPairs) x
-  print x
-  --x <- case HXT.runLA (getID xid HXT.>>> HXT.attachNsEnv namespaces) doc of
-    --[x] -> return x
-    --_ -> fail "verifySignature: element not found"
-  --sx <- case child "Signature" x of
-    --[sx] -> return sx
-    --_ -> fail "verifySignature: Signature not found"
-  let sx = addNs $ last ch
-  let z = DOM.NTree y $ init ch
-  s@Signature{ signatureSignedInfo = si } <- either fail return $ docToSAML sx
-  six <- applyCanonicalization (signedInfoCanonicalizationMethod si) (Just xpath) $ DOM.mkRoot [] [x]
-  six' <- applyCanonicalization (signedInfoCanonicalizationMethod si) (Just xpath) $ DOM.mkRoot [] [z]
-  print six
-  print six'
-  rl <- mapM (`verifyReference` z) (signedInfoReference si)
-  let keys = pks <> foldMap (foldMap keyinfo . keyInfoElements) (signatureKeyInfo s)
-      verified :: Maybe Bool
-      verified = verifyBytes keys (signatureMethodAlgorithm $ signedInfoSignatureMethod si) (signatureValue $ signatureSignatureValue s) six
-      valid :: Bool
-      valid = elem (Just xid) rl && all isJust rl
-  print $ verifyBytes keys (signatureMethodAlgorithm $ signedInfoSignatureMethod si) (signatureValue $ signatureSignatureValue s) six
-  print $ verifyBytes keys (signatureMethodAlgorithm $ signedInfoSignatureMethod si) (signatureValue $ signatureSignatureValue s) six'
-  print verified
-  return $ (valid &&) <$> verified
+verifySignature :: PublicKeys -> HXT.XmlTree -> IO (Maybe Bool)
+verifySignature pks xmlTree' = do
+  let xmlTree = force xmlTree' -- |§JP force evaluation is needed
+      (DOM.NTree rootNode childrenNodesList) = xmlTree
+      signatureNode = addNs $ last childrenNodesList
+      xmlTreeWOSignature = DOM.NTree rootNode (init childrenNodesList)
+  signature@Signature {
+    signatureSignedInfo = signedInfo@SignedInfo {
+      signedInfoReference = reference@Reference {
+        referenceTransforms = transforms
+      } NonEmpty.:| []
+    }
+  } <- either fail return $ docToSAML signatureNode
+  let implicitTransformEmbeddedSI = signedInfo { signedInfoReference = reference { referenceTransforms = addTransform transforms npciDefaultImplicitTransform } NonEmpty.:| [] } -- |§JP Adding a default implicit transform to the existing list
+  (isDigestValid NonEmpty.:| _) <- mapM (`verifyReference` xmlTreeWOSignature) (signedInfoReference implicitTransformEmbeddedSI)
+  signedInfoXml <- applyCanonicalization (signedInfoCanonicalizationMethod signedInfo) (Just xpath) $ DOM.mkRoot [] [xmlTree]
+  let keys = pks <> foldMap (foldMap keyinfo . keyInfoElements) (signatureKeyInfo signature)
+      isDigestVerified = verifyBytes keys (signatureMethodAlgorithm $ signedInfoSignatureMethod signedInfo) (signatureValue $ signatureSignatureValue signature) signedInfoXml
+  return $ (isDigestValid &&) <$> isDigestVerified
   where
     addNs (DOM.NTree (HXT.XTag qn attrs) six) = DOM.NTree (HXT.XTag (DOM.mkNsName ("ds:" <> DOM.qualifiedName qn) "http://www.w3.org/2000/09/xmldsig#") (addNs <$> attrs)) (addNs <$> six)
     addNs x = x
-    child n = HXT.runLA $ HXT.getChildren HXT.>>> isDSElem n HXT.>>> HXT.cleanupNamespaces HXT.collectPrefixUriPairs
     keyinfo (KeyInfoKeyValue kv) = publicKeyValues kv
     keyinfo (X509Data l) = foldMap keyx509d l
     keyinfo _ = mempty
